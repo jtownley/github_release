@@ -16,7 +16,15 @@ echo "Setting up environment"
 echo "------------------------------------"
 
 virtualenv venv
+if [ $? != 0 ]; then
+    echo "Virtual env not installed"
+    exit 53
+fi
 source venv/bin/activate
+if [ $? != 0 ]; then
+    echo "Virtual Environment Failed"
+    exit 87
+fi
 
 echo "------------------------------------"
 echo "Extracting Git Revision Number"
