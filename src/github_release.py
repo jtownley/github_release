@@ -46,7 +46,6 @@ class GitHubRelease(object):
     @property
     def _key_dict(self):
         return dict([(key, value) for (key, value) in self.__dict__.items() if key[0] != '_'])
-    
 
     def _get_file_list(self, files):
         file_list = []
@@ -55,7 +54,6 @@ class GitHubRelease(object):
             if len(expanded_files) == 0:
                 raise Exception('No file(s) found matching "{}"'.format(a_file))
             file_list += expanded_files
-
 
     def _get_token_value(self, token):
         if not os.path.isfile(token):
@@ -78,7 +76,15 @@ class GitHubRelease(object):
     def release(self,):
         release_url = '/repos/{owner}/{repo}/releases'.format(**self._key_dict)
         release_payload = self._get_release_data()
-        self._gateway.post_json_data(release_url, release_payload)
+        print ('Posting to {}\n payload: {}'.format(release_url, release_payload))
+        result = self._gateway.post_json_data(release_url, release_payload)
+        if result.getcode() != 201:
+            raise Exception('Failed to create release: Got response code: {}  error: {}'.format(result.getcode(), result.read()))
+        response_content = result.read()
+        response_json = json.loads(response_content)
+        if 'id' not in response_json:
+            raise Exception('Failed to create release: Got response code: {}  response: {}'.format(result.getcode(), response_content))
+
 
 if __name__ == "__main__":
     default_api = 'https://api.github.com'
@@ -86,7 +92,6 @@ if __name__ == "__main__":
     default_token = 'token.txt'
     default_owner = 'PeachyPrinter'
     default_repo = 'peachyprintertools'
-    default_files = ['*.zip, *.tar.gz']
     default_name = 'Automated Release {tag}'
     default_description = ''
 
@@ -98,14 +103,34 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--token-file',                        action='store',      required=False, default=default_token, help="File containing the github token [{}]".format(default_token))
     parser.add_argument('-v', '--tag',                               action='store',      required=True,                         help="Tag version for release")
     parser.add_argument('-a', '--api',                               action='store',      required=False, default=default_api,   help='Base api url in the format "https://api.github.com" [{}]'.format(default_api))
-    parser.add_argument('-l', '--url',                               action='store',      required=False, default=default_url,   help='Url of the releases post in the format "/url" accepts keys ({}) [{}]'.format(', '.join(supported_keys), default_url))
     parser.add_argument('-r', '--repo',                              action='store',      required=True,                         help='Repository to update to')
     parser.add_argument('-f', '--files',                             action='append',     required=False,                        help='File to release (use this flag for each file(s)) wildcards in file ok.')
     parser.add_argument('-n', '--name',        dest='name_t',        action='store',      required=True,                         help='Name for the release accepts keys ({})'.format(', '.join(supported_keys)))
     parser.add_argument('-d', '--description', dest='description_t', action='store',      required=False, default='',            help='Description for release accepts keys ({}) []'.format(', '.join(supported_keys)))
     parser.add_argument('-k', '--draft',                             action='store_true', required=False, default=False,         help='Marks release as draft')
-    parser.add_argument('-q', '--quiet',                             action='store_true', required=False, default=False,         help='Only prints errors')
     args, unknown = parser.parse_known_args()
 
-    print args.files
-    print dir(args)
+    api = args.api
+    description_template = args.description
+    draft = args.draft
+    files = args.files
+    name_template = args.name_t
+    owner = args.owner
+    repo = args.repo
+    tag = args.tag
+    token = args.token_file
+    username = args.username
+
+    GitHubRelease(
+        api=api,
+        description_template=description_template,
+        draft=draft,
+        files=files,
+        name_template=name_template,
+        owner=owner,
+        repo=repo,
+        tag=tag,
+        token=token,
+        username=username
+    ).release()
+

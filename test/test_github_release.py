@@ -2,7 +2,8 @@ import unittest
 import sys
 import os
 import json
-from mock import patch
+from mock import patch, MagicMock
+import cStringIO
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -38,6 +39,18 @@ class TestGitHubRelease(unittest.TestCase):
             'username': self.expected_username,
 
         }
+
+    def setup_mock(self, mock_GitHubGateway):
+        mock_ghg = mock_GitHubGateway.return_value
+        mock_ghg.post_json_data.return_value = self.get_mock_response(code=201, data='{"id": 1}')
+
+
+    def get_mock_response(self, code=200, data=""):
+        response = MagicMock()
+        response.getcode.return_value = code
+        dataString = cStringIO.StringIO(data)
+        response.read = dataString.read
+        return response
 
     def test_when_token_file_is_missing_exception_is_raised(self, mock_GitHubGateway):
         self.kwargs['token'] = 'not/a/file.txt'
@@ -89,6 +102,7 @@ class TestGitHubRelease(unittest.TestCase):
         self.assertEqual(expected, ghr.description)
 
     def test_release_calls_post_json_data_with_correct_url_and_data_for_release(self, mock_GitHubGateway):
+        self.setup_mock(mock_GitHubGateway)
         self.kwargs['owner'] = 'Big'
         self.kwargs['repo'] = 'Canary'
         expected_url = '/repos/Big/Canary/releases'
@@ -107,6 +121,7 @@ class TestGitHubRelease(unittest.TestCase):
         mock_GitHubGateway.return_value.post_json_data.assert_called_with(expected_url, expected_data)
 
     def test_release_calls_post_json_data_with_correct_url_and_data_for_release_when_draft(self, mock_GitHubGateway):
+        self.setup_mock(mock_GitHubGateway)
         self.kwargs['owner'] = 'Big'
         self.kwargs['repo'] = 'Canary'
         expected_url = '/repos/Big/Canary/releases'
@@ -124,6 +139,28 @@ class TestGitHubRelease(unittest.TestCase):
         ghr.release()
 
         mock_GitHubGateway.return_value.post_json_data.assert_called_with(expected_url, expected_data)
+
+    def test_release_rasies_exception_if_response_code_is_not_201(self, mock_GitHubGateway):
+        expected_data = "404 happens"
+        mock_GitHubGateway.return_value.post_json_data.return_value = self.get_mock_response(code=404, data=expected_data)
+        expected_error = 'Failed to create release: Got response code: {}  error: {}'.format(404, expected_data)
+
+        ghr = GitHubRelease(**self.kwargs)
+        with self.assertRaises(Exception) as context:
+            ghr.release()
+
+        self.assertEqual(expected_error, context.exception.message)
+
+    def test_release_rasies_exception_if_response_doesnt_contain_id(self, mock_GitHubGateway):
+        expected_data = '{"valid": "json"}'
+        mock_GitHubGateway.return_value.post_json_data.return_value = self.get_mock_response(code=201, data=expected_data)
+        expected_error = 'Failed to create release: Got response code: {}  response: {}'.format(201, expected_data)
+
+        ghr = GitHubRelease(**self.kwargs)
+        with self.assertRaises(Exception) as context:
+            ghr.release()
+
+        self.assertEqual(expected_error, context.exception.message)
 
 if __name__ == '__main__':
     unittest.main()
