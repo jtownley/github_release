@@ -15,7 +15,7 @@ echo "------------------------------------"
 echo "Setting up environment"
 echo "------------------------------------"
 
-virtualenv venv
+python -m virtualenv venv
 if [ $? != 0 ]; then
     echo "Virtual env not installed"
     exit 53
