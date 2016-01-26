@@ -17,10 +17,9 @@ class TestGitHubRelease(unittest.TestCase):
         self.files = []
         with open('test_token.txt', 'w') as token:
             token.write(self.expected_token_value)
-        print os.path.join(os.path.dirname(__file__), 'test_token.txt')
         self.kwargs = {
             'api': self.expected_api,
-            'token': os.path.join(os.path.dirname(__file__), 'test_token.txt'),
+            'token': os.path.join(os.getcwd(), 'test_token.txt'),
             'username': self.expected_username,
             'files': [],
         }
