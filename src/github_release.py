@@ -4,14 +4,6 @@ import urllib2
 import json
 import argparse
 
-api_base = 'https://api.github.com'
-username = 'jtownley'
-token = '9cada3e26863e50fbf22dd9124bd54f77e22fe27'
-owner = 'PeachyPrinter'
-repo = 'peachyprintertools'
-post_release_url = '{base}/repos/{owner}/{repo}/releases'.format(base=api_base, owner=owner, repo=repo)
-
-
 # password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
 # password_mgr.add_password(None, api_base, username, token)
 # handler = urllib2.HTTPBasicAuthHandler(password_mgr)
@@ -52,8 +44,8 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--repo',        dest='repo',          action='store',      required=True,                         help='Repository to update to')
     parser.add_argument('-f', '--files',       dest='files',         action='store',      required=False, default=default_files, help='List of files to release wildcards in files ok. [{}]'.format(default_files))
     parser.add_argument('-n', '--name',        dest='name_t',        action='store',      required=True,                         help='Name for the release accepts keys ({})'.format(', '.join(supported_keys)))
-    parser.add_argument('-d', '--description', dest='description_t', action='store',      required=False, default=None,          help='Description for release accepts keys (see --help) []')
-    parser.add_argument('-k', '--draft',       dest='draft',         action='store-true', required=False, default=None,          help='Marks release as draft')
-    parser.add_argument('-q', '--quiet',       dest='quiet',         action='store-true', required=False, default=None,          help='Only prints errors')
+    parser.add_argument('-d', '--description', dest='description_t', action='store',      required=False, default='',            help='Description for release accepts keys ({}) []'.format(', '.join(supported_keys)))
+    parser.add_argument('-k', '--draft',       dest='draft',         action='store-true', required=False, default=False,          help='Marks release as draft')
+    parser.add_argument('-q', '--quiet',       dest='quiet',         action='store-true', required=False, default=False,          help='Only prints errors')
     args, unknown = parser.parse_known_args()
 
