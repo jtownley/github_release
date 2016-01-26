@@ -6,22 +6,26 @@ import glob
 import json
 import argparse
 
-# password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-# password_mgr.add_password(None, api_base, username, token)
-# handler = urllib2.HTTPBasicAuthHandler(password_mgr)
-# opener = urllib2.build_opener(handler)
-
-# result = opener.open(api_base +'/repos/{}/{}/releases'.format(owner, repo))
-# release_data = json.loads(result.read())
-# print json.dumps(release_data, sort_keys=True, indent=4, separators=(',', ': '))
-
 
 class GitHubGateway(object):
     def __init__(self, username, token, base_url):
-        pass
+        self.base_url = base_url
+        self.token = token
+        password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        password_mgr.add_password(None, self.base_url, username, token)
+        handler = urllib2.HTTPBasicAuthHandler(password_mgr)
+        self.opener = urllib2.build_opener(handler)
 
     def post_json_data(self, url, data):
-        pass
+        method = 'POST'
+        full_url = self.base_url + url
+        print full_url
+        request = urllib2.Request(full_url, data=data)
+        request.add_header("Content-Type", 'application/json')
+        request.add_header("Accept", 'application/vnd.github.v3+json')
+        request.add_header('Authorization',' token {}'.format(self.token))
+        request.get_method = lambda: method
+        return self.opener.open(request)
 
     def post_file(self, url, type, name, data):
         pass
@@ -84,6 +88,8 @@ class GitHubRelease(object):
         response_json = json.loads(response_content)
         if 'id' not in response_json:
             raise Exception('Failed to create release: Got response code: {}  response: {}'.format(result.getcode(), response_content))
+        print "Release Created Successfully"
+
 
 
 if __name__ == "__main__":
@@ -111,7 +117,7 @@ if __name__ == "__main__":
     args, unknown = parser.parse_known_args()
 
     api = args.api
-    description_template = args.description
+    description_template = args.description_t
     draft = args.draft
     files = args.files
     name_template = args.name_t
