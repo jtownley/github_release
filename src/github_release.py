@@ -28,21 +28,25 @@ class GitHubGateway(object):
 
 
 class GitHubRelease(object):
-    def __init__(self, api=None, description_template=None, files=[], name_template=None, owner=None, token=None, username=None):
+    def __init__(self, api=None, description_template=None, draft=False, files=[], name_template=None, owner=None, repo=None, tag=None, token=None, username=None):
         self._token_value = self._get_token_value(token)
-        self.username = username
         self.api_base_url = api
+        self.draft = draft
         self.owner = owner
+        self.repo = repo
+        self.tag = tag
+        self.username = username
+
         self._gateway = GitHubGateway(self.username, self._token_value, self.api_base_url)
         self.files = self._get_file_list(files)
 
-        key_dict = dict([(key, value) for (key, value) in self.__dict__.items() if key[0] != '_'])
+        self.name = name_template.format(**self._key_dict)
+        self.description = description_template.format(**self._key_dict)
 
-        # self.release_url = '{base}/repos/{owner}/{repo}/releases'.format(**key_dict)
-        self.name = name_template.format(**key_dict)
-        self.description = description_template.format(**key_dict)
-
-
+    @property
+    def _key_dict(self):
+        return dict([(key, value) for (key, value) in self.__dict__.items() if key[0] != '_'])
+    
 
     def _get_file_list(self, files):
         file_list = []
@@ -59,11 +63,22 @@ class GitHubRelease(object):
         with open(token, 'r') as token_file:
             token_value = token_file.read()
         return token_value
-        
-        
-        # self.post_release_url = '{base}/repos/{owner}/{repo}/releases'.format(base=api_base, owner=owner, repo=repo)
-    def run(self,):
-        pass
+
+    def _get_release_data(self):
+        payload = {
+            "tag_name": self.tag,
+            "target_commitish": "master",
+            "name": self.name,
+            "body": self.description,
+            "draft": self.draft,
+            "prerelease": False
+        }
+        return json.dumps(payload, sort_keys=True, indent=4, separators=(',', ': '))
+
+    def release(self,):
+        release_url = '/repos/{owner}/{repo}/releases'.format(**self._key_dict)
+        release_payload = self._get_release_data()
+        self._gateway.post_json_data(release_url, release_payload)
 
 if __name__ == "__main__":
     default_api = 'https://api.github.com'

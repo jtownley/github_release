@@ -1,6 +1,7 @@
 import unittest
 import sys
 import os
+import json
 from mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -18,17 +19,24 @@ class TestGitHubRelease(unittest.TestCase):
         self.expected_name_template = 'expected_name_template'
         self.expected_owner = 'expected_owner'
         self.expected_description_template = 'expected_description_template'
+        self.expected_tag = "Expected Tag"
+        self.expected_repo = "expected_repo"
+        self.expected_draft = False
         self.files = []
         with open('test_token.txt', 'w') as token:
             token.write(self.expected_token_value)
         self.kwargs = {
             'api': self.expected_api,
+            'description_template': self.expected_description_template,
+            'draft': self.expected_draft,
+            'files': [],
+            'name_template': self.expected_name_template,
+            'owner': self.expected_owner,
+            'repo': self.expected_repo,
+            'tag': self.expected_tag,
             'token': os.path.join(os.getcwd(), 'test_token.txt'),
             'username': self.expected_username,
-            'name_template': self.expected_name_template,
-            'description_template': self.expected_description_template,
-            'owner': self.expected_owner,
-            'files': [],
+
         }
 
     def test_when_token_file_is_missing_exception_is_raised(self, mock_GitHubGateway):
@@ -79,6 +87,43 @@ class TestGitHubRelease(unittest.TestCase):
         ghr = GitHubRelease(**self.kwargs)
 
         self.assertEqual(expected, ghr.description)
+
+    def test_release_calls_post_json_data_with_correct_url_and_data_for_release(self, mock_GitHubGateway):
+        self.kwargs['owner'] = 'Big'
+        self.kwargs['repo'] = 'Canary'
+        expected_url = '/repos/Big/Canary/releases'
+        expected_data = json.dumps({
+              "tag_name": self.kwargs['tag'],
+              "target_commitish": "master",
+              "name": self.kwargs['name_template'],
+              "body": self.kwargs['description_template'],
+              "draft": False,
+              "prerelease": False
+            }, sort_keys=True, indent=4, separators=(',', ': '))
+
+        ghr = GitHubRelease(**self.kwargs)
+        ghr.release()
+
+        mock_GitHubGateway.return_value.post_json_data.assert_called_with(expected_url, expected_data)
+
+    def test_release_calls_post_json_data_with_correct_url_and_data_for_release_when_draft(self, mock_GitHubGateway):
+        self.kwargs['owner'] = 'Big'
+        self.kwargs['repo'] = 'Canary'
+        expected_url = '/repos/Big/Canary/releases'
+        self.kwargs['draft'] = True
+        expected_data = json.dumps({
+              "tag_name": self.kwargs['tag'],
+              "target_commitish": "master",
+              "name": self.kwargs['name_template'],
+              "body": self.kwargs['description_template'],
+              "draft": True,
+              "prerelease": False
+            }, sort_keys=True, indent=4, separators=(',', ': '))
+
+        ghr = GitHubRelease(**self.kwargs)
+        ghr.release()
+
+        mock_GitHubGateway.return_value.post_json_data.assert_called_with(expected_url, expected_data)
 
 if __name__ == '__main__':
     unittest.main()
