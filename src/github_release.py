@@ -26,14 +26,23 @@ class GitHubGateway(object):
     def post_file(self, url, type, name, data):
         pass
 
+
 class GitHubRelease(object):
-    def __init__(self, api=None, files=[], token=None, username=None):
+    def __init__(self, api=None, description_template=None, files=[], name_template=None, owner=None, token=None, username=None):
         self._token_value = self._get_token_value(token)
         self.username = username
         self.api_base_url = api
+        self.owner = owner
         self._gateway = GitHubGateway(self.username, self._token_value, self.api_base_url)
         self.files = self._get_file_list(files)
-        # self.tag = tag
+
+        key_dict = dict([(key, value) for (key, value) in self.__dict__.items() if key[0] != '_'])
+
+        # self.release_url = '{base}/repos/{owner}/{repo}/releases'.format(**key_dict)
+        self.name = name_template.format(**key_dict)
+        self.description = description_template.format(**key_dict)
+
+
 
     def _get_file_list(self, files):
         file_list = []
@@ -58,7 +67,6 @@ class GitHubRelease(object):
 
 if __name__ == "__main__":
     default_api = 'https://api.github.com'
-    default_url = '{base}/repos/{owner}/{repo}/releases'
     default_username = 'jtownley'
     default_token = 'token.txt'
     default_owner = 'PeachyPrinter'
