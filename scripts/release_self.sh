@@ -38,6 +38,6 @@ function find_version_number ()
   echo ""
 }
 
-find_version_number()
+find_version_number
 
-python ../src/github_release.py -u jtownley -o jtownley -v $VERSION -r github_release -n "{tag release}" -k -t ../token.txt
+python src/github_release.py -u jtownley -o jtownley -v $VERSION -r github_release -n "{tag release}" -k -t token.txt -f one.txt -f two.fork -f *.tho
