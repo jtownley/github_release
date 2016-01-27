@@ -23,11 +23,11 @@ class GitHubGateway(object):
         request = urllib2.Request(full_url, data=data)
         request.add_header("Content-Type", 'application/json')
         request.add_header("Accept", 'application/vnd.github.v3+json')
-        request.add_header('Authorization',' token {}'.format(self.token))
+        request.add_header('Authorization', 'token {}'.format(self.token))
         request.get_method = lambda: method
         return self.opener.open(request)
 
-    def post_file(self, url, type, name, data):
+    def post_file(self, url, file_handle):
         pass
 
 
@@ -58,6 +58,7 @@ class GitHubRelease(object):
             if len(expanded_files) == 0:
                 raise Exception('No file(s) found matching "{}"'.format(a_file))
             file_list += expanded_files
+        return file_list
 
     def _get_token_value(self, token):
         if not os.path.isfile(token):
@@ -77,7 +78,7 @@ class GitHubRelease(object):
         }
         return json.dumps(payload, sort_keys=True, indent=4, separators=(',', ': '))
 
-    def release(self,):
+    def _publish_release(self):
         release_url = '/repos/{owner}/{repo}/releases'.format(**self._key_dict)
         release_payload = self._get_release_data()
         print ('Posting to {}\n payload: {}'.format(release_url, release_payload))
@@ -88,7 +89,32 @@ class GitHubRelease(object):
         response_json = json.loads(response_content)
         if 'id' not in response_json:
             raise Exception('Failed to create release: Got response code: {}  response: {}'.format(result.getcode(), response_content))
-        print "Release Created Successfully"
+        return response_json['id']
+
+    def _publish_files(self, release_id):
+        for afile in self.files:
+            self._publish_file(release_id, afile)
+
+    def _publish_file(self, release_id, afile):
+        filename = os.path.basename(afile)
+        url = '/repos/{owner}/{repo}/releases/:{release_id}/assets?name={filename}'.format(filename=filename, release_id=release_id, **self._key_dict)
+        with open(afile, 'r') as file_handle:
+            result = self._gateway.post_file(url, file_handle)
+        if result.getcode() != 201:
+            raise Exception('Failed to upload assets: Got response code: {}  error: {}'.format(result.getcode(), result.read()))
+        # response_content = result.read()
+        # response_json = json.loads(response_content)
+        # if 'id' not in response_json:
+        #     raise Exception('Failed to create release: Got response code: {}  response: {}'.format(result.getcode(), response_content))
+        # return response_json['id']
+
+    def release(self,):
+        print "Beginning publish"
+        release_id = self._publish_release()
+        print "Release Created Successfully. Id: {}".format(release_id)
+        print "Begining file upload"
+        self._publish_files(release_id)
+        print "Files Publishing Complete"
 
 
 

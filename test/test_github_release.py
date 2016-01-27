@@ -2,7 +2,7 @@ import unittest
 import sys
 import os
 import json
-from mock import patch, MagicMock
+from mock import patch, MagicMock, mock_open
 import cStringIO
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -23,9 +23,11 @@ class TestGitHubRelease(unittest.TestCase):
         self.expected_tag = "Expected Tag"
         self.expected_repo = "expected_repo"
         self.expected_draft = False
-        self.files = []
         with open('test_token.txt', 'w') as token:
             token.write(self.expected_token_value)
+        with open('test_upload.txt', 'w') as upload:
+            upload.write('Expected_Upload')
+        self.files = [os.path.join(os.getcwd(), 'test_upload.txt')]
         self.kwargs = {
             'api': self.expected_api,
             'description_template': self.expected_description_template,
@@ -43,9 +45,10 @@ class TestGitHubRelease(unittest.TestCase):
     def setup_mock(self, mock_GitHubGateway):
         mock_ghg = mock_GitHubGateway.return_value
         mock_ghg.post_json_data.return_value = self.get_mock_response(code=201, data='{"id": 1}')
+        mock_ghg.post_file.return_value = self.get_mock_response(code=201, data='{"id": 1}')
 
 
-    def get_mock_response(self, code=200, data=""):
+    def get_mock_response(self, code=200, data='{"id": 1}'):
         response = MagicMock()
         response.getcode.return_value = code
         dataString = cStringIO.StringIO(data)
@@ -161,6 +164,36 @@ class TestGitHubRelease(unittest.TestCase):
             ghr.release()
 
         self.assertEqual(expected_error, context.exception.message)
+
+    def test_release_calls_post_file_with_correct_url_and_data_for_release(self, mock_GitHubGateway):
+        self.setup_mock(mock_GitHubGateway)
+        self.kwargs['owner'] = 'Big'
+        self.kwargs['repo'] = 'Canary'
+        self.kwargs['files'] = self.files
+        expected_url = '/repos/Big/Canary/releases/:1/assets?name=test_upload.txt'
+
+        mock_open_file = mock_open()
+
+        with patch('github_release.open', mock_open_file, create=True):
+            mock_file = mock_open_file.return_value
+            ghr = GitHubRelease(**self.kwargs)
+            ghr.release()
+
+        mock_GitHubGateway.return_value.post_file.assert_called_with(expected_url, mock_file)
+
+    def test_release_raises_exception_if_upload_fails(self, mock_GitHubGateway):
+        self.setup_mock(mock_GitHubGateway)
+        self.kwargs['files'] = self.files
+        mock_GitHubGateway.return_value.post_file.return_value = self.get_mock_response(code=404, data='404 File not found')
+
+        mock_open_file = mock_open()
+
+        with patch('github_release.open', mock_open_file, create=True):
+            with self.assertRaises(Exception) as context:
+                ghr = GitHubRelease(**self.kwargs)
+                ghr.release()
+
+        self.assertEqual('Failed to upload assets: Got response code: 404  error: 404 File not found', context.exception.message)
 
 if __name__ == '__main__':
     unittest.main()
