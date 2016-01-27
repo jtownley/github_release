@@ -90,6 +90,7 @@ class GitHubRelease(object):
 
     def _publish_files(self, release_json):
         for afile in self.files:
+            print ('Publishing Asset: "{}"'.format(afile))
             self._publish_file(release_json, afile)
 
     def _publish_file(self, release_json, afile):
