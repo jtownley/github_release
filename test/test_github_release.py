@@ -67,6 +67,13 @@ class TestGitHubRelease(unittest.TestCase):
 
         mock_GitHubGateway.assert_called_with(self.expected_username, self.expected_token_value)
 
+    def test_init_strips_token_whitespace(self, mock_GitHubGateway):
+        with open('test_token.txt', 'w') as token:
+            token.write(self.expected_token_value + '\n')
+        GitHubRelease(**self.kwargs)
+
+        mock_GitHubGateway.assert_called_with(self.expected_username, self.expected_token_value)
+
     def test_init_raises_if_file_specified_and_missing(self, mock_GitHubGateway):
         self.kwargs['files'] = ['fish.bork']
 

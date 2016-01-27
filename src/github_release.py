@@ -62,7 +62,7 @@ class GitHubRelease(object):
         if not os.path.isfile(token):
             raise Exception('Could not find token file')
         with open(token, 'r') as token_file:
-            token_value = token_file.read()
+            token_value = token_file.read().strip()
         return token_value
 
     def _get_release_data(self):
@@ -79,7 +79,6 @@ class GitHubRelease(object):
     def _publish_release(self):
         release_url = '{base}/repos/{owner}/{repo}/releases'.format(base=self.api_base_url, **self._key_dict)
         release_payload = self._get_release_data()
-        print ('Posting to {}\n payload: {}'.format(release_url, release_payload))
         result = self._gateway.post_json_data(release_url, release_payload)
         response_content = result.content
         if result.status_code != 201:
