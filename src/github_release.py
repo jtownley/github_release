@@ -21,6 +21,8 @@ class GitHubGateway(object):
         print('Session created for user: {} with token starting with: {}'.format(self.username, self.token[:2]))
 
     def post_json_data(self, url, data):
+        print('Posting to: "{}"'.format(url))
+        print('Data: "{}"'.format(data))
         return self.session.post(url, data=data, headers=self.headers)
 
     def post_file(self, url, file_handle, params):
@@ -101,6 +103,8 @@ class GitHubRelease(object):
             raise Exception('Failed to upload assets: Got response code: {}  error: {}'.format(result.status_code, result.content))
 
     def release(self,):
+        for key, value in self._key_dict.items():
+            print '"{}" = "{}"'.format(key, value)
         print "Beginning publish"
         release_json = self._publish_release()
         print "Release Created Successfully. Id: {}".format(release_json['id'])
