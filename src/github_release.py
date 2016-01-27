@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import urllib2
+import requests
 import os
 import glob
 import json
@@ -8,27 +8,22 @@ import argparse
 
 
 class GitHubGateway(object):
-    def __init__(self, username, token, base_url):
-        self.base_url = base_url
+    def __init__(self, username, token):
         self.token = token
-        password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-        password_mgr.add_password(None, self.base_url, username, token)
-        handler = urllib2.HTTPBasicAuthHandler(password_mgr)
-        self.opener = urllib2.build_opener(handler)
+        self.username = username
+        self.session = requests.Session()
+        self.session.auth = (self.username, self.token)
+        self.headers = {
+        "Content-Type": 'application/json',
+        "Accept": 'application/vnd.github.v3+json',
+        'Authorization': 'token {}'.format(self.token),
+        }
 
     def post_json_data(self, url, data):
-        method = 'POST'
-        full_url = self.base_url + url
-        print full_url
-        request = urllib2.Request(full_url, data=data)
-        request.add_header("Content-Type", 'application/json')
-        request.add_header("Accept", 'application/vnd.github.v3+json')
-        request.add_header('Authorization', 'token {}'.format(self.token))
-        request.get_method = lambda: method
-        return self.opener.open(request)
+        return self.session.post(url, data=data, headers=self.headers)
 
-    def post_file(self, url, file_handle):
-        pass
+    def post_file(self, url, file_handle, params):
+        return self.session.post(url, data=file_handle, params=params, headers=self.headers)
 
 
 class GitHubRelease(object):
@@ -41,7 +36,7 @@ class GitHubRelease(object):
         self.tag = tag
         self.username = username
 
-        self._gateway = GitHubGateway(self.username, self._token_value, self.api_base_url)
+        self._gateway = GitHubGateway(self.username, self._token_value)
         self.files = self._get_file_list(files)
 
         self.name = name_template.format(**self._key_dict)
@@ -79,41 +74,38 @@ class GitHubRelease(object):
         return json.dumps(payload, sort_keys=True, indent=4, separators=(',', ': '))
 
     def _publish_release(self):
-        release_url = '/repos/{owner}/{repo}/releases'.format(**self._key_dict)
+        release_url = '{base}/repos/{owner}/{repo}/releases'.format(base=self.api_base_url, **self._key_dict)
         release_payload = self._get_release_data()
         print ('Posting to {}\n payload: {}'.format(release_url, release_payload))
         result = self._gateway.post_json_data(release_url, release_payload)
-        if result.getcode() != 201:
-            raise Exception('Failed to create release: Got response code: {}  error: {}'.format(result.getcode(), result.read()))
-        response_content = result.read()
+        response_content = result.content
+        if result.status_code != 201:
+            raise Exception('Failed to create release: Got response code: {}  error: {}'.format(result.status_code, response_content))
         response_json = json.loads(response_content)
         if 'id' not in response_json:
-            raise Exception('Failed to create release: Got response code: {}  response: {}'.format(result.getcode(), response_content))
-        return response_json['id']
+            raise Exception('Failed to create release: Got response code: {}  response: {}'.format(result.status_code, response_content))
+        return response_json
 
-    def _publish_files(self, release_id):
+    def _publish_files(self, release_json):
         for afile in self.files:
-            self._publish_file(release_id, afile)
+            self._publish_file(release_json, afile)
 
-    def _publish_file(self, release_id, afile):
+    def _publish_file(self, release_json, afile):
         filename = os.path.basename(afile)
-        url = '/repos/{owner}/{repo}/releases/:{release_id}/assets?name={filename}'.format(filename=filename, release_id=release_id, **self._key_dict)
+        url = release_json['upload_url'].split('{')[0]
+        params = {'name': filename}
         with open(afile, 'r') as file_handle:
-            result = self._gateway.post_file(url, file_handle)
-        if result.getcode() != 201:
-            raise Exception('Failed to upload assets: Got response code: {}  error: {}'.format(result.getcode(), result.read()))
-        # response_content = result.read()
-        # response_json = json.loads(response_content)
-        # if 'id' not in response_json:
-        #     raise Exception('Failed to create release: Got response code: {}  response: {}'.format(result.getcode(), response_content))
-        # return response_json['id']
+            result = self._gateway.post_file(url, file_handle, params)
+        if result.status_code != 201:
+            raise Exception('Failed to upload assets: Got response code: {}  error: {}'.format(result.status_code, result.content))
+
 
     def release(self,):
         print "Beginning publish"
-        release_id = self._publish_release()
-        print "Release Created Successfully. Id: {}".format(release_id)
+        release_json = self._publish_release()
+        print "Release Created Successfully. Id: {}".format(release_json['id'])
         print "Begining file upload"
-        self._publish_files(release_id)
+        self._publish_files(release_json)
         print "Files Publishing Complete"
 
 

@@ -43,16 +43,15 @@ class TestGitHubRelease(unittest.TestCase):
         }
 
     def setup_mock(self, mock_GitHubGateway):
+        self.expected_upload_url = "https:/fake/url"
         mock_ghg = mock_GitHubGateway.return_value
-        mock_ghg.post_json_data.return_value = self.get_mock_response(code=201, data='{"id": 1}')
+        mock_ghg.post_json_data.return_value = self.get_mock_response(code=201, data='{{"id": 1,"upload_url": "{}{{?name,label}}"}}'.format(self.expected_upload_url))
         mock_ghg.post_file.return_value = self.get_mock_response(code=201, data='{"id": 1}')
-
 
     def get_mock_response(self, code=200, data='{"id": 1}'):
         response = MagicMock()
-        response.getcode.return_value = code
-        dataString = cStringIO.StringIO(data)
-        response.read = dataString.read
+        response.status_code = code
+        response.content = data
         return response
 
     def test_when_token_file_is_missing_exception_is_raised(self, mock_GitHubGateway):
@@ -66,7 +65,7 @@ class TestGitHubRelease(unittest.TestCase):
     def test_init_creates_expected_gateway(self, mock_GitHubGateway):
         GitHubRelease(**self.kwargs)
 
-        mock_GitHubGateway.assert_called_with(self.expected_username, self.expected_token_value, self.expected_api)
+        mock_GitHubGateway.assert_called_with(self.expected_username, self.expected_token_value)
 
     def test_init_raises_if_file_specified_and_missing(self, mock_GitHubGateway):
         self.kwargs['files'] = ['fish.bork']
@@ -108,7 +107,7 @@ class TestGitHubRelease(unittest.TestCase):
         self.setup_mock(mock_GitHubGateway)
         self.kwargs['owner'] = 'Big'
         self.kwargs['repo'] = 'Canary'
-        expected_url = '/repos/Big/Canary/releases'
+        expected_url = self.expected_api + '/repos/Big/Canary/releases'
         expected_data = json.dumps({
               "tag_name": self.kwargs['tag'],
               "target_commitish": "master",
@@ -127,7 +126,7 @@ class TestGitHubRelease(unittest.TestCase):
         self.setup_mock(mock_GitHubGateway)
         self.kwargs['owner'] = 'Big'
         self.kwargs['repo'] = 'Canary'
-        expected_url = '/repos/Big/Canary/releases'
+        expected_url = self.expected_api + '/repos/Big/Canary/releases'
         self.kwargs['draft'] = True
         expected_data = json.dumps({
               "tag_name": self.kwargs['tag'],
@@ -170,7 +169,7 @@ class TestGitHubRelease(unittest.TestCase):
         self.kwargs['owner'] = 'Big'
         self.kwargs['repo'] = 'Canary'
         self.kwargs['files'] = self.files
-        expected_url = '/repos/Big/Canary/releases/:1/assets?name=test_upload.txt'
+        expected_params= {"name": "test_upload.txt"}
 
         mock_open_file = mock_open()
 
@@ -179,7 +178,7 @@ class TestGitHubRelease(unittest.TestCase):
             ghr = GitHubRelease(**self.kwargs)
             ghr.release()
 
-        mock_GitHubGateway.return_value.post_file.assert_called_with(expected_url, mock_file)
+        mock_GitHubGateway.return_value.post_file.assert_called_with(self.expected_upload_url, mock_file, expected_params)
 
     def test_release_raises_exception_if_upload_fails(self, mock_GitHubGateway):
         self.setup_mock(mock_GitHubGateway)
