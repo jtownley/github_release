@@ -14,9 +14,9 @@ class GitHubGateway(object):
         self.session = requests.Session()
         self.session.auth = (self.username, self.token)
         self.headers = {
-        "Content-Type": 'application/json',
-        "Accept": 'application/vnd.github.v3+json',
-        'Authorization': 'token {}'.format(self.token),
+            "Content-Type": 'application/json',
+            "Accept": 'application/vnd.gitpython hub.v3+json',
+            'Authorization': 'token {}'.format(self.token),
         }
 
     def post_json_data(self, url, data):
@@ -99,7 +99,6 @@ class GitHubRelease(object):
         if result.status_code != 201:
             raise Exception('Failed to upload assets: Got response code: {}  error: {}'.format(result.status_code, result.content))
 
-
     def release(self,):
         print "Beginning publish"
         release_json = self._publish_release()
@@ -107,7 +106,6 @@ class GitHubRelease(object):
         print "Begining file upload"
         self._publish_files(release_json)
         print "Files Publishing Complete"
-
 
 
 if __name__ == "__main__":
@@ -157,4 +155,3 @@ if __name__ == "__main__":
         token=token,
         username=username
     ).release()
-

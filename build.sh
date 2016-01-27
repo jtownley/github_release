@@ -65,6 +65,7 @@ echo `python2.7 --version`
 echo "------------------------------------"
 
 python -m pip install mock==1.0.1
+python -m pip install requests
 python test/test_github_release.py
 
 if [ $? != 0 ]; then
