@@ -15,7 +15,7 @@ class GitHubGateway(object):
         self.session.auth = (self.username, self.token)
         self.headers = {
             "Content-Type": 'application/json',
-            "Accepts": 'application/vnd.gitpython hub.v3+json',
+            "Accepts": 'application/vnd.github.v3+json',
             'Authorization': 'token {}'.format(self.token),
         }
         print('Session created for user: {} with token starting with: {}'.format(self.username, self.token[:2]))
