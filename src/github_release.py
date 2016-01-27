@@ -18,6 +18,7 @@ class GitHubGateway(object):
             "Accept": 'application/vnd.gitpython hub.v3+json',
             'Authorization': 'token {}'.format(self.token),
         }
+        print('Session created for user: {} with token starting with: {}'.format(self.username, self.token[:2]))
 
     def post_json_data(self, url, data):
         return self.session.post(url, data=data, headers=self.headers)
