@@ -187,6 +187,20 @@ class TestGitHubRelease(unittest.TestCase):
 
         mock_GitHubGateway.return_value.post_file.assert_called_with(self.expected_upload_url, mock_file, expected_params)
 
+    def test_release_doesnt_send_file_if_not_speciofied_release(self, mock_GitHubGateway):
+        self.setup_mock(mock_GitHubGateway)
+        self.kwargs['owner'] = 'Big'
+        self.kwargs['repo'] = 'Canary'
+        self.kwargs['files'] = []
+
+        mock_open_file = mock_open()
+
+        with patch('github_release.open', mock_open_file, create=True):
+            ghr = GitHubRelease(**self.kwargs)
+            ghr.release()
+
+        self.assertFalse(mock_GitHubGateway.return_value.post_file.called)
+
     def test_release_raises_exception_if_upload_fails(self, mock_GitHubGateway):
         self.setup_mock(mock_GitHubGateway)
         self.kwargs['files'] = self.files

@@ -131,7 +131,7 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--tag',                               action='store',      required=True,                         help="Tag version for release")
     parser.add_argument('-a', '--api',                               action='store',      required=False, default=default_api,   help='Base api url in the format "https://api.github.com" [{}]'.format(default_api))
     parser.add_argument('-r', '--repo',                              action='store',      required=True,                         help='Repository to update to')
-    parser.add_argument('-f', '--files',                             action='append',     required=False,                        help='File to release (use this flag for each file(s)) wildcards in file ok.')
+    parser.add_argument('-f', '--files',                             action='append',     required=False, default=[],            help='File to release (use this flag for each file(s)) wildcards in file ok.')
     parser.add_argument('-n', '--name',        dest='name_t',        action='store',      required=True,                         help='Name for the release accepts keys ({})'.format(', '.join(supported_keys)))
     parser.add_argument('-d', '--description', dest='description_t', action='store',      required=False, default='',            help='Description for release accepts keys ({}) []'.format(', '.join(supported_keys)))
     parser.add_argument('-k', '--draft',                             action='store_true', required=False, default=False,         help='Marks release as draft')

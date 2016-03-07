@@ -7,9 +7,7 @@ echo "------------------------------------"
 
 rm -f src/VERSION.py
 rm -f version.properties
-rm -f venv
-
-# rm -rf venv
+rm -rf venv
 
 echo "------------------------------------"
 echo "Setting up environment"
